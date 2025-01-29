@@ -13,10 +13,10 @@ This project analyzes the factors affecting student test scores using statistica
 The following R packages are used in this project:
 - `tidyverse`
 - `caret`
-- `ggplot2`
+- `ggplot2 or reshape2`
+- `randomForest`
 
 ## Usage
 1. Clone this repository.
 2. Install the required R packages.
 3. Run the scripts in the `src/` folder.
-
