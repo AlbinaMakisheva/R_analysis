@@ -20,20 +20,18 @@ if (!file.exists(csv_file)) {
 
 df <- read.csv(csv_file, sep = ";")
 
-
 # Part 1: Dataset Preparation
-
 print("First few rows of the dataset:")
-head(df)
+print(head(df))
 
 print("Dataset structure:")
-str(df)
+print(str(df))
 
-print("Checking for missing values:")
+print("Checking for missing values...")
 missing_values <- sum(is.na(df))
 print(paste("Missing values:", missing_values))
 
-print("Checking for duplicates:")
+print("Checking for duplicates...")
 duplicates <- sum(duplicated(df))
 print(paste("Duplicate rows:", duplicates))
 
@@ -68,10 +66,8 @@ df <- df %>%
   )
 
 # Part 2: Exploratory Data Analysis
-
-# Summary
 print("Summary statistics of the dataset:")
-summary(df)
+print(summary(df))
 
 # Visualize score distributions
 ggplot(df, aes(x = G3)) + 
@@ -94,10 +90,7 @@ ggplot(melt(correlation_matrix), aes(Var1, Var2, fill = value)) +
   theme_minimal() + 
   ggtitle("Correlation Heatmap")
 
-
 # Part 3: Feature Selection and Data Preparation
-
-# Visualizing relationships between predictors and target
 ggplot(df, aes(x = G2, y = G3, color = sex)) + 
   geom_point() + 
   ggtitle("G2 vs G3 by Sex") +
@@ -106,9 +99,8 @@ ggplot(df, aes(x = G2, y = G3, color = sex)) +
 # Check feature importance using a simple linear model
 lm_model <- lm(G3 ~ G1 + G2 + sex + age + address + Pstatus + Medu + Fedu + Mjob + Fjob + reason + schoolsup, data = df)
 
-# Summary of the model
 print("Linear Model Summary:")
-summary(lm_model)
+print(summary(lm_model))
 
 # Feature selection using Recursive Feature Elimination
 control <- rfeControl(functions = rfFuncs, method = "cv", number = 10)
@@ -117,7 +109,6 @@ rfe_result <- rfe(df %>% select(-G3), df$G3, sizes = c(1:5), rfeControl = contro
 print("Recursive Feature Elimination Results:")
 print(rfe_result)
 
-# Prepare data for machine learning
 set.seed(42)
 
 # Split the data into training and testing
@@ -125,6 +116,44 @@ train_index <- createDataPartition(df$G3, p = 0.8, list = FALSE)
 train_data <- df[train_index, ]
 test_data <- df[-train_index, ]
 
-# Number of observations
 print(paste("Training set size:", nrow(train_data)))
 print(paste("Testing set size:", nrow(test_data)))
+
+# Part 4: Random Forest analysis
+set.seed(123)
+rf_model <- randomForest(G3 ~ ., data = train_data, ntree = 100, importance = TRUE)
+
+# Make predictions on test data
+predictions <- predict(rf_model, newdata = test_data)
+
+# Evaluate model performance
+rmse <- sqrt(mean((predictions - test_data$G3)^2))
+mae <- mean(abs(predictions - test_data$G3))
+
+print(paste("RMSE:", rmse))
+print(paste("MAE:", mae))
+
+# Part 5: Model Performance
+# Feature Importance Plot
+importance_df <- as.data.frame(importance(rf_model))
+importance_df$Feature <- rownames(importance_df)  
+
+print("Feature Importance DataFrame:")
+print(importance_df)
+
+ggplot(importance_df, aes(x = reorder(Feature, IncNodePurity), y = IncNodePurity)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Feature Importance (Random Forest - Node Purity)") +
+  xlab("Features") +
+  ylab("Increase in Node Purity")
+
+# Actual vs. Predicted Plot
+ggplot(data.frame(Actual = test_data$G3, Predicted = predictions), aes(x = Actual, y = Predicted)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Actual vs. Predicted Test Scores") +
+  xlab("Actual G3 Scores") +
+  ylab("Predicted G3 Scores")
